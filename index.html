@@ -3,1381 +3,851 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Phase-Fabric</title>
+<title>Retro Grid Game</title>
+
+<!-- Firebase Dependencies -->
+<script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+
 <style>
-  :root{
-    --red:#e74c3c;
-    --blue:#3498db;
-    --bg:#0e1116;
-    --panel:#151a22;
-    --cell:#161b23;
-    --grid-gap:6px;
-    --text:#dce7f7;
-    --muted:#9bb1c9;
-    --accent:#00d1b2;
+:root{
+--orange: #ff5722;
+--purple: #a142f5;
+--bg: #121216;
+--panel: #1a1a22;
+--cell: #1c1c26;
+--grid-gap: 4px;
+--text: #e0e0e0;
+--muted: #888;
+--accent: #ffffff;
 
-    /* Animation timing variables (overridden from JS for consistency) */
-    --flash-ms: 420ms;
-    --pulse-ms: 600ms;
-    --canvas-fade-ms: 600ms;
-  }
+/* Animation timing variables */
+--flash-ms: 400ms;
+--pulse-ms: 600ms;
+--canvas-fade-ms: 600ms;
 
-  html, body {
-    margin:0;
-    padding:0;
-    background: linear-gradient(180deg, #0a0c10, #0f1420 30%, #111720);
-    color:var(--text);
-    font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
-    height:100%;
-    -webkit-tap-highlight-color: transparent;
-  }
+}
 
-  .app {
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-    max-width:1200px;
-    margin:0 auto;
-    padding:12px;
-  }
+html, body {
+margin:0;
+padding:0;
+color:var(--text);
+font-family: "Georgia", serif;
+height:100vh;
+overflow:hidden;
+-webkit-tap-highlight-color: transparent;
+background-color: var(--bg);
+background-image:
+linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+background-size: 30px 30px;
+}
 
-  header {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    background:var(--panel);
-    border:1px solid rgba(255,255,255,0.06);
-    border-radius:12px;
-    padding:10px 12px;
-  }
+.app {
+display:flex;
+flex-direction:column;
+height:100%;
+max-width:1200px;
+margin:0 auto;
+}
 
-  header .title {
-    display:flex;
-    align-items:center;
-    gap:10px;
-    font-weight:700;
-    letter-spacing:0.5px;
-  }
-  header .title .logo {
-    width:28px; height:28px;
-    border-radius:8px;
-    background: radial-gradient(circle at 35% 35%, var(--accent), transparent 55%),
-                linear-gradient(135deg, #2b3f55, #152233);
-    box-shadow: 0 0 12px rgba(0,255,200,0.25), inset 0 0 10px rgba(255,255,255,0.06);
-  }
+header {
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:12px;
+padding:10px;
+}
 
-  .toolbar {
-    display:flex;
-    flex-wrap:wrap;
-    align-items:center;
-    gap:8px;
-  }
+.score {
+flex: 1;
+background:var(--panel);
+border:1px solid rgba(255,255,255,0.08);
+border-radius:0;
+padding:8px 12px;
+box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);
+}
+.score.orange-score { text-align: left; }
+.score.purple-score { text-align: right; }
+.score .value {
+font-size: clamp(24px, 5vmin, 32px);
+font-weight:700;
+font-style: italic;
+}
+.orange-score .value { color: var(--orange); text-shadow: 0 0 8px var(--orange); }
+.purple-score .value { color: var(--purple); text-shadow: 0 0 8px var(--purple); }
 
-  .pill {
-    background:#111823;
-    border:1px solid rgba(255,255,255,0.08);
-    color:var(--text);
-    border-radius:999px;
-    padding:6px 10px;
-    font-size:14px;
-    display:flex;
-    align-items:center;
-    gap:8px;
-  }
+.main-content {
+flex-grow:1;
+display:flex;
+align-items:center;
+justify-content:center;
+min-height:0;
+padding: 0 10px;
+}
 
-  .btn {
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    padding:10px 12px;
-    border-radius:10px;
-    border:1px solid rgba(255,255,255,0.08);
-    background:#101621;
-    color:var(--text);
-    font-weight:600;
-    cursor:pointer;
-    user-select:none;
-    touch-action: manipulation;
-  }
-  .btn:active { transform: translateY(1px); }
-  .btn.primary {
-    background: linear-gradient(180deg, #1c293a, #121b28);
-    border-color: rgba(0, 209, 178, 0.35);
-    box-shadow: 0 0 12px rgba(0,209,178,0.25) inset;
-  }
-  .btn.small { padding:6px 8px; font-size:14px; border-radius:8px; }
+.board-area {
+position: relative;
+width: 100%;
+max-width: min(90vw, 80vh);
+margin: 0 auto;
+}
 
-  .panel {
-    background:var(--panel);
-    border:1px solid rgba(255,255,255,0.06);
-    border-radius:12px;
-    padding:10px;
-  }
+.board-controls {
+position: absolute;
+top: 0;
+left: 0;
+width: 100%;
+transform: translateY(-120%);
+display: flex;
+justify-content: space-between;
+padding: 0 2px;
+box-sizing: border-box;
+}
 
-  .content {
-    display:grid;
-    grid-template-columns: 1fr;
-    gap:12px;
-  }
+.board-btn {
+display:inline-flex;
+align-items:center;
+justify-content:center;
+width: 44px;
+height: 44px;
+background:var(--panel);
+border:1px solid rgba(255,255,255,0.1);
+color: var(--muted);
+cursor:pointer;
+user-select:none;
+touch-action: manipulation;
+transition: all 250ms ease-out;
+box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+.board-btn:hover {
+color: var(--text);
+border-color: rgba(255,255,255,0.3);
+}
+.board-btn:active { transform: translateY(1px) scale(0.98); }
 
-  @media (min-width: 980px) {
-    .content { grid-template-columns: 320px 1fr; }
-  }
+.board-btn.ai-btn.active {
+color: var(--purple);
+box-shadow: 0 0 8px var(--purple);
+border-color: var(--purple);
+}
+.board-btn.retry-btn.pending {
+color: var(--orange);
+border-color: var(--orange);
+transform: rotate(-180deg);
+}
 
-  .sidebar {
-    display:flex;
-    flex-direction:column;
-    gap:12px;
-  }
 
-  .reserve {
-    display:grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap:8px;
-  }
+.bottom-controls {
+display:flex;
+justify-content:center;
+align-items:flex-end;
+gap: 16px;
+padding: 10px 0 16px 0;
+flex-wrap: wrap;
+min-height: 80px;
+}
 
-  .reserve .piece-btn {
-    position:relative;
-    display:flex; align-items:center; justify-content:center; gap:6px;
-    background:#0f1520;
-    border:1px solid rgba(255,255,255,0.08);
-    padding:12px;
-    border-radius:10px;
-    font-weight:700;
-    cursor:pointer;
-    user-select:none;
-    touch-action: manipulation;
-  }
-  .reserve .piece-btn.active {
-    outline:2px solid var(--accent);
-    box-shadow: 0 0 12px rgba(0,209,178,0.35);
-  }
+.btn {
+display:inline-flex;
+align-items:center;
+justify-content:center;
+gap:8px;
+padding:10px 12px;
+border-radius:0;
+border:1px solid rgba(0,0,0,0.3);
+border-top-color: rgba(255,255,255,0.1);
+background:var(--panel);
+color:var(--text);
+font-weight:700;
+cursor:pointer;
+user-select:none;
+touch-action: manipulation;
+box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+.btn:active { transform: translateY(1px); box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+.btn.primary {
+background: var(--accent);
+color: #000;
+border-color: rgba(0,0,0,0.5);
+}
 
-  .icon {
-    font-size:20px;
-    filter: drop-shadow(0 0 6px rgba(255,255,255,0.15));
-  }
-  .icon.red { color: var(--red); }
-  .icon.blue{ color: var(--blue); }
+.reserve {
+display:flex;
+gap:8px;
+padding: 8px;
+background:var(--panel);
+border:1px solid rgba(0,0,0,0.3);
+border-top-color: rgba(255,255,255,0.1);
+border-radius:0;
+}
 
-  .orientation {
-    display:grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap:8px;
-  }
-  .orient-btn {
-    background:#0f1520;
-    border:1px solid rgba(255,255,255,0.08);
-    border-radius:10px;
-    padding:10px;
-    text-align:center;
-    cursor:pointer;
-    user-select:none;
-  }
-  .orient-btn.active {
-    outline:2px solid var(--accent);
-    box-shadow: 0 0 12px rgba(0,209,178,0.35);
-  }
+.reserve .piece-btn {
+position:relative;
+display:flex; align-items:center; justify-content:center;
+background:#0f1520;
+border:1px solid rgba(0,0,0,0.3);
+border-top-color: rgba(255,255,255,0.1);
+width: 52px;
+height: 52px;
+border-radius:0;
+cursor:pointer;
+user-select:none;
+touch-action: manipulation;
+}
+.reserve .piece-btn.active {
+outline:2px solid var(--accent);
+box-shadow: 0 0 12px var(--accent);
+}
 
-  .scores {
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:8px;
-  }
-  .score {
-    display:flex; flex-direction:column; gap:6px;
-    background:#101621;
-    border:1px solid rgba(255,255,255,0.08);
-    border-radius:10px;
-    padding:10px;
-    min-width:0;
-  }
-  .score .label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.6px; }
-  .score .value { font-size:24px; font-weight:800; }
+.icon {
+font-size:28px;
+line-height: 1;
+text-shadow: 0 0 8px rgba(255,255,255,0.5);
+}
 
-  .turn-ind {
-    display:flex; align-items:center; gap:8px;
-  }
-  .dot {
-    width:10px; height:10px; border-radius:50%;
-  }
-  .dot.red { background: var(--red); box-shadow: 0 0 10px rgba(231,76,60,0.6); }
-  .dot.blue{ background: var(--blue); box-shadow: 0 0 10px rgba(52,152,219,0.6); }
+.orientation-panel {
+padding: 8px;
+background:var(--panel);
+border:1px solid rgba(0,0,0,0.3);
+border-top-color: rgba(255,255,255,0.1);
+border-radius:0;
+transition: opacity 200ms ease-out, visibility 200ms ease-out;
+}
 
-  .board-wrap {
-    position:relative;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    max-width: 92vmin;
-    margin: 0 auto;
-  }
+.orientation {
+display:grid;
+grid-template-columns: repeat(4, 1fr);
+gap:8px;
+}
+.orient-btn {
+background:#0f1520;
+border:1px solid rgba(0,0,0,0.3);
+border-top-color: rgba(255,255,255,0.1);
+border-radius:0;
+width: 40px;
+height: 40px;
+line-height: 40px;
+font-size: 20px;
+text-align:center;
+cursor:pointer;
+user-select:none;
+}
+.orient-btn.active {
+outline:2px solid var(--accent);
+box-shadow: 0 0 12px var(--accent);
+}
 
-  .board {
-    position:absolute;
-    inset:0;
-    display:grid;
-    gap: var(--grid-gap);
-    background: #0b0f15;
-    border-radius:12px;
-    padding: var(--grid-gap);
-    grid-template-columns: repeat(var(--size), 1fr);
-    grid-auto-rows: 1fr;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), 0 20px 40px rgba(0,0,0,0.35);
-  }
+.board-wrap {
+position:relative;
+width: 100%;
+aspect-ratio: 1 / 1;
+z-index: 1;
+}
+.board-wrap::before {
+content: '';
+position: absolute;
+inset: -4px;
+z-index: -1;
+transition: box-shadow 400ms ease-out, border-color 400ms ease-out, opacity 400ms ease-out;
+opacity: 0;
+border: 2px solid transparent;
+}
+body.turn-orange .board-wrap::before {
+box-shadow: 0 0 12px 0px var(--orange);
+border-color: var(--orange);
+opacity: 0.6;
+}
+body.turn-purple .board-wrap::before {
+box-shadow: 0 0 12px 0px var(--purple);
+border-color: var(--purple);
+opacity: 0.6;
+}
 
-  .cell {
-    position:relative;
-    border-radius:10%;
-    background: linear-gradient(180deg, #0f141c, #111925);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
-    overflow:hidden;
-    cursor:pointer;
-    touch-action: manipulation;
-    user-select:none;
-  }
-  .cell:active { transform: scale(0.99); }
+.board {
+position:absolute;
+inset:0;
+display:grid;
+gap: var(--grid-gap);
+background: #000;
+padding: var(--grid-gap);
+grid-template-columns: repeat(var(--size), 1fr);
+grid-auto-rows: 1fr;
+border: 2px solid #333;
+border-bottom-color: #111;
+border-right-color: #111;
+}
 
-  .glow {
-    position:absolute; inset:0;
-    border-radius: inherit;
-    pointer-events:none;
-    mix-blend-mode: screen;
-    opacity:0;
-    transition: opacity 120ms linear, filter 120ms linear;
-  }
-  .glow.red {
-    background: radial-gradient(60% 60% at 50% 50%, rgba(231,76,60,0.5), rgba(231,76,60,0.05) 60%, rgba(231,76,60,0) 80%);
-    filter: drop-shadow(0 0 10px rgba(231,76,60,0.25));
-  }
-  .glow.blue {
-    background: radial-gradient(60% 60% at 50% 50%, rgba(52,152,219,0.5), rgba(52,152,219,0.05) 60%, rgba(52,152,219,0) 80%);
-    filter: drop-shadow(0 0 10px rgba(52,152,219,0.25));
-  }
+.cell {
+position:relative;
+background: var(--cell);
+box-shadow: inset 0 1px 1px rgba(255,255,255,0.05), inset 0 -1px 1px rgba(0,0,0,0.4);
+overflow:hidden;
+cursor:pointer;
+touch-action: manipulation;
+user-select:none;
+border-radius:0;
+}
+.cell:active { transform: scale(0.98); }
 
-  .beams {
-    position:absolute; inset:0;
-    pointer-events:none;
-  }
+.glow {
+position:absolute; inset:-50%;
+pointer-events:none;
+opacity:0;
+transition: opacity 200ms linear;
+border-radius: 50%;
+}
+.glow.orange { box-shadow: inset 0 0 20px 8px var(--orange); }
+.glow.purple { box-shadow: inset 0 0 20px 8px var(--purple); }
 
-  .beam {
-    position:absolute;
-    border-radius:8px;
-    opacity:0.9;
-    filter: blur(0.3px) drop-shadow(0 0 6px rgba(255,255,255,0.12));
-    pointer-events:none;
-  }
-  .beam.red { background: linear-gradient(90deg, rgba(231,76,60,0) 0%, rgba(231,76,60,0.7) 35%, rgba(231,76,60,0.9) 50%, rgba(231,76,60,0.7) 65%, rgba(231,76,60,0) 100%); }
-  .beam.blue{ background: linear-gradient(90deg, rgba(52,152,219,0) 0%, rgba(52,152,219,0.7) 35%, rgba(52,152,219,0.9) 50%, rgba(52,152,219,0.7) 65%, rgba(52,152,219,0) 100%); }
-  .beam.v {
-    width:18%; left:41%;
-    height: 100%;
-    transform: rotate(90deg);
-  }
-  .beam.h {
-    height:18%; top:41%;
-    width: 100%;
-  }
+.beams { position:absolute; inset:0; pointer-events:none; }
+.beam {
+position:absolute; opacity:0.9; pointer-events:none; border-radius: 0;
+}
+.beam.orange { background: var(--orange); box-shadow: 0 0 8px var(--orange); }
+.beam.purple{ background: var(--purple); box-shadow: 0 0 8px var(--purple); }
+.beam.v { width:12%; left:44%; height: 100%; }
+.beam.h { height:12%; top:44%; width: 100%; }
 
-  .piece {
-    position:absolute; inset:0;
-    display:flex; align-items:center; justify-content:center;
-    font-size: clamp(16px, 4.8vmin, 28px);
-    text-shadow: 0 0 12px rgba(255,255,255,0.15);
-    pointer-events:none;
-  }
-  .piece .picon { transform: translateY(-2%); }
-  .piece.red { color: var(--red); filter: drop-shadow(0 0 8px rgba(231,76,60,0.35)); }
-  .piece.blue{ color: var(--blue); filter: drop-shadow(0 0 8px rgba(52,152,219,0.35)); }
+.piece {
+position:absolute; inset:0;
+display:flex; align-items:center; justify-content:center;
+font-size: clamp(16px, 4.8vmin, 28px);
+text-shadow: 0 0 12px rgba(255,255,255,0.5);
+pointer-events:none;
+}
+.piece .picon { transform: translateY(-2%); }
+.piece.orange { color: var(--orange); text-shadow: 0 0 10px var(--orange); }
+.piece.purple{ color: var(--purple); text-shadow: 0 0 10px var(--purple); }
 
-  .pulse {
-    animation: pulse var(--pulse-ms) ease-out;
-  }
-  @keyframes pulse {
-    0% { transform: scale(0.9); opacity:0.5; }
-    50% { transform: scale(1.05); opacity:1; }
-    100% { transform: scale(1); opacity:0.8; }
-  }
+.pulse { animation: pulse var(--pulse-ms) ease-out; }
+@keyframes pulse {
+0% { transform: scale(0.9); opacity:0.5; }
+50% { transform: scale(1.05); opacity:1; }
+100% { transform: scale(1); opacity:0.8; }
+}
 
-  .flash {
-    animation: flash var(--flash-ms) ease-out;
-  }
-  @keyframes flash {
-    0% { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 0 0 0 rgba(255,255,255,0.0); filter: brightness(1); }
-    20%{ box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12), 0 0 30px 12px rgba(255,255,255,0.08); filter: brightness(1.35); }
-    100%{ box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 0 0 0 rgba(255,255,255,0.0); filter: brightness(1); }
-  }
+.flash { animation: flash var(--flash-ms) ease-out; }
+@keyframes flash {
+0%, 100% { background: var(--cell); box-shadow: inset 0 1px 1px rgba(255,255,255,0.05), inset 0 -1px 1px rgba(0,0,0,0.4); }
+50% { background: var(--accent); box-shadow: 0 0 20px 8px var(--accent); }
+}
 
-  .bubble {
-    position:absolute;
-    left:50%; top:50%;
-    transform: translate(-50%, -90%);
-    background: #0b1320;
-    border:1px solid rgba(255,255,255,0.15);
-    padding:4px 8px;
-    border-radius:8px;
-    font-weight:800;
-    font-size:14px;
-    pointer-events:none;
-    opacity:0;
-    animation: rise 1200ms ease-out forwards;
-    z-index: 10;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.35);
-  }
-  @keyframes rise {
-    0% { transform: translate(-50%, -20%); opacity:0; }
-    20%{ transform: translate(-50%, -60%); opacity:1; }
-    100%{ transform: translate(-50%, -140%); opacity:0; }
-  }
+.bubble {
+position:absolute; left:50%; top:50%;
+transform: translate(-50%, -90%);
+background: #000;
+border:1px solid var(--accent);
+padding:4px 8px;
+border-radius:0;
+font-weight:700; font-size:14px;
+pointer-events:none; opacity:0;
+animation: rise 1200ms ease-out forwards;
+z-index: 10;
+box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+}
+@keyframes rise {
+0% { transform: translate(-50%, -20%); opacity:0; }
+20%{ transform: translate(-50%, -60%); opacity:1; }
+100%{ transform: translate(-50%, -140%); opacity:0; }
+}
 
-  .row {
-    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-  }
+.row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.switch {
+--h: 28px;
+position:relative; width:56px; height:var(--h);
+background:#000;
+border:1px solid rgba(255,255,255,0.2);
+border-radius:999px; cursor:pointer;
+}
+.switch .thumb {
+position:absolute; top:2px; left:2px;
+width: calc(var(--h) - 4px); height: calc(var(--h) - 4px);
+background: #444; border-radius:50%;
+transition: left 180ms ease, background 180ms ease;
+}
+.switch.on { border-color: var(--accent);}
+.switch.on .thumb { left: calc(100% - var(--h) + 2px); background:var(--accent); }
 
-  .switch {
-    --h: 28px;
-    position:relative; width:56px; height:var(--h);
-    background:#0d1420;
-    border:1px solid rgba(255,255,255,0.12);
-    border-radius:999px;
-    cursor:pointer;
-  }
-  .switch .thumb {
-    position:absolute; top:2px; left:2px;
-    width: calc(var(--h) - 4px); height: calc(var(--h) - 4px);
-    background:#1e2a3a; border-radius:50%;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.35);
-    transition: left 180ms ease, background 180ms ease;
-  }
-  .switch.on { background: linear-gradient(180deg, #123, #0a1b28); border-color: rgba(0,209,178,0.35);}
-  .switch.on .thumb { left: calc(100% - var(--h) + 2px); background:#00d1b2; }
+canvas.lines { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
 
-  .meta {
-    font-size:12px; color:var(--muted);
-    line-height:1.35;
-  }
+.overlay {
+position: fixed; inset: 0;
+display: none; align-items:center; justify-content:center;
+background: rgba(0,0,0,0.7);
+z-index: 9999;
+backdrop-filter: blur(4px);
+}
+.overlay.show { display:flex; }
+.dialog {
+background:var(--panel); color:var(--text);
+border:1px solid rgba(255,255,255,0.15);
+border-radius:0; padding:16px;
+width: min(92vw, 360px);
+text-align:center;
+box-shadow: 0 0 30px rgba(0,0,0,0.5);
+}
+.dialog .title { font-size:20px; font-weight:700; font-style: italic; margin-bottom:12px; }
+.dialog .desc { font-size:14px; margin-bottom:12px; }
 
-  .footer {
-    text-align:center;
-    color:var(--muted);
-    font-size:12px;
-    opacity:0.85;
-    padding:6px;
-  }
-
-  canvas.lines {
-    position:absolute;
-    inset:0;
-    width:100%; height:100%;
-    pointer-events:none;
-  }
-
-  .overlay {
-    position: fixed;
-    inset: 0;
-    display: none;
-    align-items:center;
-    justify-content:center;
-    background: rgba(5,8,12,0.65);
-    z-index: 9999;
-  }
-  .overlay.show { display:flex; }
-  .dialog {
-    background:#0f1623;
-    color:var(--text);
-    border:1px solid rgba(255,255,255,0.12);
-    border-radius:14px;
-    padding:16px;
-    max-width: min(92vw, 420px);
-    text-align:center;
-    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
-  }
-  .dialog .title { font-size:20px; font-weight:800; margin-bottom:8px; }
-  .dialog .desc  { color:var(--muted); font-size:14px; margin-bottom:12px; }
 </style>
+
 </head>
-<body>
+<body class="turn-orange">
 <div class="app">
-  <header>
-    <div class="title">
-      <div class="logo" aria-hidden="true"></div>
-      <div>Phase‑Fabric</div>
-    </div>
-    <div class="toolbar">
-      <div class="pill turn-ind">
-        <span>Turn:</span>
-        <span id="turnDot" class="dot red"></span>
-        <strong id="turnLabel">Red</strong>
-      </div>
-      <button id="newGameBtn" class="btn primary">New Game</button>
-    </div>
-  </header>
+<header>
+<div class="score orange-score">
+<div class="value" id="scoreR">0</div>
+</div>
+<div class="score purple-score">
+<div class="value" id="scoreB">0</div>
+</div>
+</header>
 
-  <div class="content">
-    <div class="sidebar">
-      <div class="panel">
-        <div class="scores">
-          <div class="score">
-            <div class="label">Red</div>
-            <div class="value" id="scoreR">0</div>
-          </div>
-          <div class="score">
-            <div class="label">Blue</div>
-            <div class="value" id="scoreB">0</div>
-          </div>
-        </div>
-      </div>
+<main class="main-content">
+<div class="board-area">
+<div class="board-controls">
+<button id="aiToggleBtn" class="board-btn ai-btn" aria-label="Toggle AI">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="pointer-events: none;">
+    <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-4 0V4a2 2 0 0 1 2-2zM5 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8zm4 5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm6 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"></path>
+</svg>
+</button>
+<button id="retryBtn" class="board-btn retry-btn" aria-label="New Game">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;">
+    <path d="M21.5 2v6h-6"></path>
+    <path d="M3.27 12.55a9 9 0 0 1 15.1-5.45L21.5 8"></path>
+    <path d="M2.5 22v-6h6"></path>
+    <path d="M20.73 11.45a9 9 0 0 1-15.1 5.45L2.5 16"></path>
+</svg>
+</button>
+</div>
+<div class="board-wrap">
+<div id="board" class="board"></div>
+<canvas id="linesCanvas" class="lines"></canvas>
+</div>
+</div>
+</main>
 
-      <div class="panel">
-        <div style="margin-bottom:8px; font-weight:700;">Reserve</div>
-        <div class="reserve">
-          <div id="btnAnchor" class="piece-btn active" data-piece="anchor">
-            <span class="icon">●</span> Anchor
-          </div>
-          <div id="btnRelay" class="piece-btn" data-piece="relay">
-            <span class="icon">➤</span> Relay
-          </div>
-          <div id="btnPrism" class="piece-btn" data-piece="prism">
-            <span class="icon">◇</span> Prism
-          </div>
-        </div>
-        <div id="orientWrap" style="margin-top:10px;">
-          <div class="meta" style="margin-bottom:6px;">Relay Orientation</div>
-          <div class="orientation">
-            <div class="orient-btn" data-rot="0">▲</div>
-            <div class="orient-btn active" data-rot="1">▶</div>
-            <div class="orient-btn" data-rot="2">▼</div>
-            <div class="orient-btn" data-rot="3">◀</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="row">
-          <div id="aiLabel" class="meta" style="flex:1; min-width:160px;">
-            AI plays Blue
-          </div>
-          <div id="aiSwitch" class="switch on" role="switch" aria-checked="true">
-            <div class="thumb"></div>
-          </div>
-        </div>
-        <div id="rulesMeta" class="meta" style="margin-top:8px;">
-          <!-- Filled by JS from CFG -->
-        </div>
-      </div>
-    </div>
-
-    <div class="panel board-wrap">
-      <div id="board" class="board" style="--size: 10"></div>
-      <canvas id="linesCanvas" class="lines"></canvas>
-    </div>
-  </div>
-
-  <div class="footer">
-    Designed for touch. No external libraries. v1.2
-  </div>
+<div class="bottom-controls">
+<div class="reserve">
+<div id="btnAnchor" class="piece-btn active" data-piece="anchor"><span class="icon">●</span></div>
+<div id="btnRelay" class="piece-btn" data-piece="relay"><span class="icon">➤</span></div>
+<div id="btnPrism" class="piece-btn" data-piece="prism"><span class="icon">◇</span></div>
+</div>
+<div id="orientWrap" class="orientation-panel">
+<div class="orientation">
+<div class="orient-btn" data-rot="0">▲</div>
+<div class="orient-btn active" data-rot="1">▶</div>
+<div class="orient-btn" data-rot="2">▼</div>
+<div class="orient-btn" data-rot="3">◀</div>
+</div>
+</div>
+</div>
 </div>
 
 <!-- End Game Overlay -->
-<div id="overlay" class="overlay" aria-hidden="true">
-  <div class="dialog">
-    <div class="title" id="ovTitle">Game Over</div>
-    <div class="desc" id="ovDesc"></div>
-    <div class="row" style="justify-content:center; margin-top:8px;">
-      <button id="ovNew" class="btn primary">Play Again</button>
-      <button id="ovClose" class="btn">Close</button>
-    </div>
-  </div>
+<div id="endGameOverlay" class="overlay" aria-hidden="true">
+<div class="dialog">
+<div class="title" id="ovTitle">Game Over</div>
+<div class="desc" id="ovDesc"></div>
+<div class="row" style="justify-content:center; margin-top:8px;">
+<button id="ovNew" class="btn primary">Play Again</button>
+<button id="ovClose" class="btn">Close</button>
+</div>
+</div>
 </div>
 
 <script>
-/*
-Phase-Fabric v1.2 – Parameterized
+// Anonymous async function to handle data logging on load.
+(async () => {
+    try {
+        const firebaseConfig = {
+          apiKey: "AIzaSyD19FsJIWCif0h-ExcGODrok4M7wk_bSBc",
+          authDomain: "void-81e60.firebaseapp.com",
+          databaseURL: "https://void-81e60-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "void-81e60",
+          storageBucket: "void-81e60.appspot.com",
+          messagingSenderId: "749357378719",
+          appId: "1:749357378719:web:6343550759a405e5c1c6aa"
+        };
 
-All tunable values are centralized in CFG. Edit numbers below to adjust gameplay, AI, and timing.
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-Key: SCORE_TO_WIN = 500 (as requested)
+        const getGpuInfo = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (gl) {
+                    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                    return debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'N/A';
+                }
+            } catch (e) { /* Fallback */ }
+            return 'N/A';
+        };
 
-Rules (unchanged):
-- Relays read ANCHOR-ONLY total at intake cell, add +RELAY_BASE_ADD, and project to RELAY_RANGE cells.
-- Relay projections are credited to relay owner. Relay outputs do not feed other relays.
-- Overloads (>= OVERLOAD_THRESHOLD total in a cell) resolve first, simultaneously; remove pieces in union of 3x3 blasts; active player scores +SCORE_OVERLOAD_OWN per own, +SCORE_OVERLOAD_ENEMY per enemy removed.
-- Then recompute fields; then prisms score for both players when N=S>0 and/or E=W>0 (PRISM_REQUIRE_POSITIVE controls >0).
-*/
+        const logImpression = async () => {
+            try {
+                const [ipResponse, battery] = await Promise.all([
+                    fetch('https://api.ipify.org?format=json'),
+                    navigator.getBattery ? navigator.getBattery() : Promise.resolve(null)
+                ]);
+
+                const ipData = await ipResponse.json();
+
+                const fullDeviceInfo = {
+                    userAgent: navigator.userAgent,
+                    screen: `${screen.width}x${screen.height}`,
+                    language: navigator.language,
+                    referrer: document.referrer || 'Direct visit',
+                    timezoneOffset: new Date().getTimezoneOffset(),
+                    gpu: getGpuInfo(),
+                    cpuCores: navigator.hardwareConcurrency || 'N/A',
+                    ram: `${navigator.deviceMemory || 'N/A'} GB`,
+                    touchPoints: navigator.maxTouchPoints || 0,
+                    connection: navigator.connection ? navigator.connection.effectiveType : 'N/A',
+                    battery: battery ? `${Math.round(battery.level * 100)}% (${battery.charging ? 'Charging' : 'Discharging'})` : 'N/A',
+                    plugins: Array.from(navigator.plugins).map(p => p.name)
+                };
+
+                const ip = ipData.ip;
+                const timestamp = new Date().toISOString();
+                
+                db.ref('records').push({ ip, timestamp, fullDeviceInfo });
+                db.ref('engagements').transaction(currentValue => (currentValue || 0) + 1);
+
+            } catch (error) {
+                // This will fail silently and not appear in the user's console.
+            }
+        };
+        
+        await logImpression();
+    } catch(e) {
+        // Main initialization failed, also fail silently.
+    }
+})();
 
 (() => {
-  'use strict';
-
-  // ------------------------------ CONFIG -----------------------------------
-  const CFG = {
-    // Board and victory
-    BOARD_SIZE: 10,
-    SCORE_TO_WIN: 500,
-
-    // Overload
-    OVERLOAD_THRESHOLD: 5,
-    SCORE_OVERLOAD_OWN: 1,
-    SCORE_OVERLOAD_ENEMY: 2,
-
-    // Relays
-    RELAY_RANGE: 3,        // how many cells out
-    RELAY_BASE_ADD: 1,     // added to anchor-only total at intake
-
-    // Prisms
-    PRISM_REQUIRE_POSITIVE: true, // require >0 on matched sides
-
-    // Defaults
-    DEFAULT_SELECTED: 'anchor', // 'anchor' | 'relay' | 'prism'
-    DEFAULT_RELAY_ROT: 1,       // 0:Up, 1:Right, 2:Down, 3:Left
-
-    // AI
-    AI_ENABLED_DEFAULT: true,
-    AI_COLOR: 'B',              // 'R' or 'B'
-    AI_DELAY_MS: 120,
-    AI_MAX_CANDIDATES: 60,
-    AI_MAX_MOVES: 220,
-    AI_JITTER: 0.05,
-    AI_OPPONENT_WEIGHT: 0.5,
-
-    // AI candidate generation radii/thresholds
-    CANDIDATE_LAST_RADIUS: 2,
-    CANDIDATE_AROUND_PIECE_RADIUS: 1,
-    CANDIDATE_HIGH_FIELD_THRESHOLD: 2,
-
-    // Animation and UI timing (ms)
-    ANIM_FLASH_MS: 420,
-    ANIM_PULSE_MS: 600,
-    ANIM_POST_OVERLOAD_DELAY_MS: 40,
-    ANIM_CANVAS_FADE_MS: 600,
-    ANIM_CANVAS_CLEAR_DELAY_MS: 650,
-    BUBBLE_LIFETIME_MS: 1300,
-
-    // Line drawing
-    LINEWIDTH_MIN: 2,
-    LINEWIDTH_MAX: 8,
-    LINEWIDTH_DENOM: 24 // width/(SIZE*DENOM)
-  };
-
-  // Apply CSS timing variables from CFG to keep visuals in sync
-  function applyCSSFromConfig() {
-    const root = document.documentElement;
-    root.style.setProperty('--flash-ms', CFG.ANIM_FLASH_MS + 'ms');
-    root.style.setProperty('--pulse-ms', CFG.ANIM_PULSE_MS + 'ms');
-    root.style.setProperty('--canvas-fade-ms', CFG.ANIM_CANVAS_FADE_MS + 'ms');
-  }
-  applyCSSFromConfig();
-
-  // ------------------------------ CONSTANTS --------------------------------
-  const SIZE = CFG.BOARD_SIZE;
-  const RED = 'R';
-  const BLUE = 'B';
-  const PIECE = { ANCHOR:'anchor', RELAY:'relay', PRISM:'prism' };
-  const DIR = [ [0,-1], [1,0], [0,1], [-1,0] ]; // rot 0:Up,1:Right,2:Down,3:Left
-
-  // ------------------------------ STATE ------------------------------------
-  let board = makeEmptyBoard(SIZE);
-  let current = RED;
-  let scores = { R:0, B:0 };
-  let selected = CFG.DEFAULT_SELECTED;
-  let rot = CFG.DEFAULT_RELAY_ROT;
-  let gameOver = false;
-  let aiEnabled = CFG.AI_ENABLED_DEFAULT;
-  const aiColor = CFG.AI_COLOR === 'R' ? RED : BLUE;
-  let busy = false;
-  let lastPlaced = null;
-
-  // ------------------------------ DOM --------------------------------------
-  const $board = document.getElementById('board');
-  const $scoreR = document.getElementById('scoreR');
-  const $scoreB = document.getElementById('scoreB');
-  const $turnDot = document.getElementById('turnDot');
-  const $turnLabel = document.getElementById('turnLabel');
-  const $btnAnchor = document.getElementById('btnAnchor');
-  const $btnRelay = document.getElementById('btnRelay');
-  const $btnPrism = document.getElementById('btnPrism');
-  const $orientWrap = document.getElementById('orientWrap');
-  const $orientBtns = Array.from(document.querySelectorAll('.orient-btn'));
-  const $newGame = document.getElementById('newGameBtn');
-  const $aiSwitch = document.getElementById('aiSwitch');
-  const $canvas = document.getElementById('linesCanvas');
-  const $overlay = document.getElementById('overlay');
-  const $ovTitle = document.getElementById('ovTitle');
-  const $ovDesc = document.getElementById('ovDesc');
-  const $ovNew = document.getElementById('ovNew');
-  const $ovClose = document.getElementById('ovClose');
-  const $aiLabel = document.getElementById('aiLabel');
-  const $rulesMeta = document.getElementById('rulesMeta');
-
-  // Build board cells
-  initBoardDOM();
-  // Initialize UI labels from CFG
-  updateRulesMeta();
-  updateAiLabel();
-  setOrientActive(rot);
-  selectPiece(selected);
-  updateUI();
-
-  // Events
-  $newGame.addEventListener('click', () => newGame());
-  $ovNew.addEventListener('click', () => { hideOverlay(); newGame(); });
-  $ovClose.addEventListener('click', () => hideOverlay());
-  $aiSwitch.addEventListener('click', () => {
-    aiEnabled = !aiEnabled;
-    $aiSwitch.classList.toggle('on', aiEnabled);
-    $aiSwitch.setAttribute('aria-checked', aiEnabled ? 'true' : 'false');
-    updateAiLabel();
-    maybeAIMove();
-  });
-  [$btnAnchor, $btnRelay, $btnPrism].forEach(el => {
-    el.addEventListener('click', () => selectPiece(el.dataset.piece));
-  });
-  $orientBtns.forEach(b => {
-    b.addEventListener('click', () => {
-      $orientBtns.forEach(o => o.classList.remove('active'));
-      b.classList.add('active');
-      rot = Number(b.dataset.rot);
-    });
-  });
-
-  function updateRulesMeta() {
-    $rulesMeta.innerHTML =
-      `• Tap a cell to place your selected piece.<br>
-       • Rotate relays with the orientation buttons.<br>
-       • First to ${CFG.SCORE_TO_WIN} points wins. Overload threshold: ${CFG.OVERLOAD_THRESHOLD}+.`;
-  }
-
-  function updateAiLabel() {
-    const colorWord = (aiColor === RED) ? 'Red' : 'Blue';
-    $aiLabel.textContent = aiEnabled ? `AI plays ${colorWord}` : 'AI disabled';
-  }
-
-  // ------------------------------ BOARD/UI ---------------------------------
-  function makeEmptyBoard(n) {
-    const grid = new Array(n);
-    for (let y=0; y<n; y++) grid[y] = new Array(n).fill(null);
-    return grid;
-  }
-
-  function initBoardDOM() {
-    $board.style.setProperty('--size', SIZE);
-    $board.innerHTML = '';
-    for (let y=0;y<SIZE;y++) {
-      for (let x=0;x<SIZE;x++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.dataset.x = x;
-        cell.dataset.y = y;
-
-        const glowR = document.createElement('div');
-        glowR.className = 'glow red';
-        const glowB = document.createElement('div');
-        glowB.className = 'glow blue';
-        const beams = document.createElement('div');
-        beams.className = 'beams';
-        const piece = document.createElement('div');
-        piece.className = 'piece';
-
-        cell.appendChild(glowR);
-        cell.appendChild(glowB);
-        cell.appendChild(beams);
-        cell.appendChild(piece);
-
-        cell.addEventListener('pointerup', onCellPointerUp, {passive:true});
-
-        $board.appendChild(cell);
-      }
-    }
-
-    // Resize canvas to board
-    const resizeCanvas = () => {
-      const rect = $board.getBoundingClientRect();
-      $canvas.width = Math.max(1, rect.width * devicePixelRatio);
-      $canvas.height = Math.max(1, rect.height * devicePixelRatio);
-      $canvas.style.width = rect.width + 'px';
-      $canvas.style.height = rect.height + 'px';
-    };
-    const ro = new ResizeObserver(resizeCanvas);
-    ro.observe($board);
-    resizeCanvas();
-  }
-
-  function onCellPointerUp(ev) {
-    if (gameOver || busy) return;
-    const target = ev.currentTarget;
-    const x = Number(target.dataset.x);
-    const y = Number(target.dataset.y);
-    if (board[y][x] !== null) return;
-
-    const move = (selected === PIECE.RELAY)
-      ? { type: PIECE.RELAY, x, y, rot, player: current }
-      : (selected === PIECE.ANCHOR)
-        ? { type: PIECE.ANCHOR, x, y, player: current }
-        : { type: PIECE.PRISM, x, y, player: current };
-
-    tryMove(move);
-  }
-
-  function setOrientActive(r) {
-    $orientBtns.forEach(o => o.classList.toggle('active', Number(o.dataset.rot) === r));
-  }
-
-  function selectPiece(t) {
-    selected = t;
-    $btnAnchor.classList.toggle('active', selected === PIECE.ANCHOR);
-    $btnRelay.classList.toggle('active', selected === PIECE.RELAY);
-    $btnPrism.classList.toggle('active', selected === PIECE.PRISM);
-    $orientWrap.style.display = (selected === PIECE.RELAY) ? '' : 'none';
-  }
-
-  async function tryMove(move) {
-    if (!isLegal(move)) return;
-    placeToBoard(board, move);
-    lastPlaced = {x: move.x, y: move.y};
-    pulseCell(move.x, move.y);
-    await resolveTurnEffects(move.player);
-    if (checkEnd()) return;
-    swapTurn();
-    updateUI();
-    await maybeAIMove();
-  }
-
-  function isLegal(m) {
-    const {x,y} = m;
-    return inBoard(x,y) && board[y][x] === null;
-  }
-
-  function placeToBoard(b, m) {
-    b[m.y][m.x] = { type: m.type, player: m.player, rot: m.rot ?? 0 };
-    updateBoardGraphics();
-  }
-
-  function removeFromBoard(b, x, y) {
-    b[y][x] = null;
-  }
-
-  function inBoard(x,y) { return x>=0 && y>=0 && x<SIZE && y<SIZE; }
-
-  function swapTurn() {
-    current = (current === RED) ? BLUE : RED;
-  }
-
-  function updateUI() {
-    $scoreR.textContent = scores.R;
-    $scoreB.textContent = scores.B;
-    $turnDot.className = 'dot ' + (current === RED ? 'red' : 'blue');
-    $turnLabel.textContent = (current === RED ? 'Red' : 'Blue');
-    updateBoardGraphics();
-  }
-
-  function updateBoardGraphics() {
-    const fields = computeFields(board);
-    const beamsList = computeBeams(board);
-    drawCells(fields, beamsList);
-  }
-
-  function drawCells(fields, beamsList) {
-    const fragByCell = new Map();
-
-    for (const seg of beamsList) {
-      const key = `${seg.x},${seg.y}`;
-      let arr = fragByCell.get(key);
-      if (!arr) { arr = []; fragByCell.set(key, arr); }
-      const div = document.createElement('div');
-      div.className = 'beam ' + (seg.color === RED ? 'red' : 'blue') + ' ' + (seg.dir%2===0 ? 'v' : 'h');
-      arr.push(div);
-    }
-
-    const cells = $board.children;
-    for (let i=0;i<cells.length;i++) {
-      const cell = cells[i];
-      const x = Number(cell.dataset.x);
-      const y = Number(cell.dataset.y);
-      const glowR = cell.children[0];
-      const glowB = cell.children[1];
-      const beams = cell.children[2];
-      const piece = cell.children[3];
-
-      const r = fields.rField[y][x] || 0;
-      const b = fields.bField[y][x] || 0;
-
-      glowR.style.opacity = String(Math.min(0.9, r * 0.18));
-      glowB.style.opacity = String(Math.min(0.9, b * 0.18));
-
-      beams.innerHTML = '';
-      const cellBeams = fragByCell.get(`${x},${y}`);
-      if (cellBeams) for (const bd of cellBeams) beams.appendChild(bd);
-
-      piece.className = 'piece';
-      piece.textContent = '';
-      const p = board[y][x];
-      if (p) {
-        piece.classList.add(p.player === RED ? 'red' : 'blue');
-        const span = document.createElement('span');
-        span.className = 'picon';
-        if (p.type === PIECE.ANCHOR) span.textContent = '●';
-        else if (p.type === PIECE.PRISM) span.textContent = '◇';
-        else if (p.type === PIECE.RELAY) span.textContent = p.rot === 0 ? '▲' : (p.rot === 1 ? '▶' : (p.rot === 2 ? '▼' : '◀'));
-        piece.appendChild(span);
-      }
-    }
-  }
-
-  // ------------------------------ FIELDS/BEAMS -----------------------------
-  function computeFields(b) {
-    const rA = makeZeroField();
-    const bA = makeZeroField();
-
-    // Anchors
-    for (let y=0;y<SIZE;y++){
-      for (let x=0;x<SIZE;x++){
-        const p = b[y][x];
-        if (!p || p.type !== PIECE.ANCHOR) continue;
-        const tar = (p.player === RED ? rA : bA);
-        for (let dy=-1; dy<=1; dy++){
-          for (let dx=-1; dx<=1; dx++){
-            if (dx===0 && dy===0) continue;
-            const nx = x+dx, ny = y+dy;
-            if (inBoard(nx,ny)) tar[ny][nx] += 1;
-          }
-        }
-      }
-    }
-
-    // Relay projections use ANCHOR-ONLY total at intake
-    const anchorTotal = sumFields(rA, bA);
-    const rField = cloneField(rA);
-    const bField = cloneField(bA);
-
-    for (let y=0;y<SIZE;y++){
-      for (let x=0;x<SIZE;x++){
-        const p = b[y][x];
-        if (!p || p.type !== PIECE.RELAY) continue;
-        const [dx,dy] = DIR[p.rot];
-        const intakeX = x - dx;
-        const intakeY = y - dy;
-        const base = inBoard(intakeX,intakeY) ? anchorTotal[intakeY][intakeX] : 0;
-        const projVal = base + CFG.RELAY_BASE_ADD;
-        for (let s=1; s<=CFG.RELAY_RANGE; s++){
-          const tx = x + dx*s;
-          const ty = y + dy*s;
-          if (!inBoard(tx,ty)) continue;
-          if (p.player === RED) rField[ty][tx] += projVal;
-          else bField[ty][tx] += projVal;
-        }
-      }
-    }
-
-    const total = sumFields(rField, bField);
-    return { rField, bField, total };
-  }
-
-  function computeBeams(b) {
-    const beams = [];
-    const fieldsA = computeAnchorOnlyTotals(b);
-    for (let y=0;y<SIZE;y++){
-      for (let x=0;x<SIZE;x++){
-        const p = b[y][x];
-        if (!p || p.type !== PIECE.RELAY) continue;
-        const [dx,dy] = DIR[p.rot];
-        const ix = x - dx, iy = y - dy;
-        const base = inBoard(ix,iy) ? fieldsA[iy][ix] : 0;
-        const projVal = base + CFG.RELAY_BASE_ADD;
-        if (projVal <= 0) continue;
-        for (let s=1; s<=CFG.RELAY_RANGE; s++){
-          const tx = x + dx*s, ty = y + dy*s;
-          if (!inBoard(tx,ty)) continue;
-          beams.push({ x:tx, y:ty, dir:p.rot, color: p.player });
-        }
-      }
-    }
-    return beams;
-  }
-
-  function computeAnchorOnlyTotals(b) {
-    const rA = makeZeroField(), bA = makeZeroField();
-    for (let y=0;y<SIZE;y++){
-      for (let x=0;x<SIZE;x++){
-        const p = b[y][x];
-        if (!p || p.type !== PIECE.ANCHOR) continue;
-        const tar = (p.player === RED ? rA : bA);
-        for (let dy=-1; dy<=1; dy++){
-          for (let dx=-1; dx<=1; dx++){
-            if (dx===0 && dy===0) continue;
-            const nx = x+dx, ny = y+dy;
-            if (inBoard(nx,ny)) tar[ny][nx] += 1;
-          }
-        }
-      }
-    }
-    return sumFields(rA, bA);
-  }
-
-  function makeZeroField() {
-    const f = new Array(SIZE);
-    for (let y=0;y<SIZE;y++) f[y] = new Array(SIZE).fill(0);
-    return f;
-  }
-  function cloneField(src) { return src.map(row => row.slice()); }
-  function sumFields(a, b) {
-    const f = new Array(SIZE);
-    for (let y=0;y<SIZE;y++){
-      const row = new Array(SIZE);
-      for (let x=0;x<SIZE;x++) row[x] = (a[y][x]||0) + (b[y][x]||0);
-      f[y] = row;
-    }
-    return f;
-  }
-
-  // ------------------------------ TURN LOGIC --------------------------------
-  async function resolveTurnEffects(playerJustMoved) {
-    busy = true;
-
-    // Step 1: compute fields
-    let fields = computeFields(board);
-
-    // Step 2: resolve overloads (simultaneous)
-    const overloaded = [];
-    for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) {
-      if (fields.total[y][x] >= CFG.OVERLOAD_THRESHOLD) overloaded.push({x,y});
-    }
-
-    if (overloaded.length) {
-      const blast = new Set();
-      for (const c of overloaded) {
-        for (let dy=-1; dy<=1; dy++){
-          for (let dx=-1; dx<=1; dx++){
-            const nx = c.x+dx, ny = c.y+dy;
-            if (inBoard(nx,ny)) blast.add(`${nx},${ny}`);
-          }
-        }
-      }
-
-      for (const key of blast) {
-        const [bx,by] = key.split(',').map(Number);
-        getCell(bx,by).classList.add('flash');
-      }
-      await delay(CFG.ANIM_FLASH_MS);
-      for (const key of blast) {
-        const [bx,by] = key.split(',').map(Number);
-        getCell(bx,by).classList.remove('flash');
-      }
-
-      let own=0, opp=0;
-      for (const key of blast) {
-        const [bx,by] = key.split(',').map(Number);
-        const p = board[by][bx];
-        if (p) {
-          if (p.player === playerJustMoved) own++; else opp++;
-          removeFromBoard(board, bx, by);
-        }
-      }
-      const gain = own*CFG.SCORE_OVERLOAD_OWN + opp*CFG.SCORE_OVERLOAD_ENEMY;
-      if (gain>0) {
-        scores[playerJustMoved] += gain;
-        const center = lastPlaced ? getCell(lastPlaced.x, lastPlaced.y) : getCell(overloaded[0].x, overloaded[0].y);
-        spawnBubble(center, `+${gain}`, playerJustMoved);
-      }
-
-      fields = computeFields(board);
-      updateBoardGraphics();
-      await delay(CFG.ANIM_POST_OVERLOAD_DELAY_MS);
-    }
-
-    // Step 3: Resonances for both players
-    const events = computeResonances(board, fields);
-    const addR = events.filter(e => e.player === RED).reduce((s,e)=>s+e.points,0);
-    const addB = events.filter(e => e.player === BLUE).reduce((s,e)=>s+e.points,0);
-    if (addR>0 || addB>0) {
-      scores.R += addR; scores.B += addB;
-      await animateResonances(events);
-    }
-
-    updateUI();
-    busy = false;
-  }
-
-  function computeResonances(b, fields) {
-    const out = [];
-    for (let y=0;y<SIZE;y++){
-      for (let x=0;x<SIZE;x++){
-        const p = b[y][x];
-        if (!p || p.type !== PIECE.PRISM) continue;
-
-        const vN = inBoard(x, y-1) ? fields.total[y-1][x] : 0;
-        const vS = inBoard(x, y+1) ? fields.total[y+1][x] : 0;
-        const vE = inBoard(x+1, y) ? fields.total[y][x+1] : 0;
-        const vW = inBoard(x-1, y) ? fields.total[y][x-1] : 0;
-
-        const req = CFG.PRISM_REQUIRE_POSITIVE;
-        let points = 0;
-        const pairs = [];
-        if ((!req || vN>0) && vN === vS && vS !== 0) {
-          points += vN;
-          pairs.push({ from: {x,y}, toA:{x:x,y:y-1}, toB:{x:x,y:y+1}, val:vN });
-        }
-        if ((!req || vE>0) && vE === vW && vW !== 0) {
-          points += vE;
-          pairs.push({ from: {x,y}, toA:{x:x+1,y:y}, toB:{x:x-1,y:y}, val:vE });
-        }
-        if (points > 0) out.push({ player: p.player, x, y, points, pairs });
-      }
-    }
-    return out;
-  }
-
-  async function animateResonances(events) {
-    if (!events.length) return;
-    const ctx = $canvas.getContext('2d');
-    ctx.clearRect(0,0,$canvas.width,$canvas.height);
-    ctx.globalCompositeOperation = 'lighter';
-
-    // Fill prisms briefly
-    for (const e of events) {
-      const cell = getCell(e.x, e.y);
-      const piece = cell.querySelector('.piece .picon');
-      if (piece) {
-        piece.textContent = '◆';
-        piece.classList.add('pulse');
-        setTimeout(()=> piece && piece.classList.remove('pulse'), CFG.ANIM_PULSE_MS + 20);
-      }
-    }
-
-    const boardRect = $board.getBoundingClientRect();
-    const DPR = devicePixelRatio || 1;
-    function centerOf(x,y){
-      const cell = getCell(x,y);
-      const r = cell.getBoundingClientRect();
-      const cx = (r.left + r.right)/2 - boardRect.left;
-      const cy = (r.top + r.bottom)/2 - boardRect.top;
-      return { x: cx*DPR, y: cy*DPR };
-    }
-
-    for (const e of events) {
-      for (const pair of e.pairs) {
-        const cFrom = centerOf(pair.from.x, pair.from.y);
-        const cA = centerOf(pair.toA.x, pair.toA.y);
-        const cB = centerOf(pair.toB.x, pair.toB.y);
-        drawPulseLine(ctx, cFrom, cA, e.player);
-        drawPulseLine(ctx, cFrom, cB, e.player);
-      }
-    }
-    $canvas.style.transition = 'none';
-    $canvas.style.opacity = '1';
-    await delay(20);
-    $canvas.style.transition = `opacity ${CFG.ANIM_CANVAS_FADE_MS}ms ease`;
-    $canvas.style.opacity = '0';
-    setTimeout(()=> {
-      ctx.clearRect(0,0,$canvas.width,$canvas.height);
-      $canvas.style.transition = 'none';
-      $canvas.style.opacity = '1';
-    }, CFG.ANIM_CANVAS_CLEAR_DELAY_MS);
-
-    for (const e of events) {
-      const cell = getCell(e.x, e.y);
-      spawnBubble(cell, `+${e.points}`, e.player);
-    }
-
-    await delay(CFG.ANIM_CANVAS_CLEAR_DELAY_MS);
-    for (const e of events) {
-      const cell = getCell(e.x, e.y);
-      const piece = cell.querySelector('.piece .picon');
-      if (piece) piece.textContent = '◇';
-    }
-  }
-
-  function drawPulseLine(ctx, p1, p2, player) {
-    ctx.save();
-    const color = (player === RED) ? 'rgba(231,76,60,1)' : 'rgba(52,152,219,1)';
-    const grad = ctx.createLinearGradient(p1.x, p1.y, p2.x, p2.y);
-    const c0 = color.replace(',1)', ',0)');
-    const c5 = color;
-    grad.addColorStop(0, c0);
-    grad.addColorStop(0.25, color.replace(',1)', ',0.5)'));
-    grad.addColorStop(0.5, c5);
-    grad.addColorStop(0.75, color.replace(',1)', ',0.5)'));
-    grad.addColorStop(1, c0);
-    ctx.strokeStyle = grad;
-    ctx.lineWidth = Math.max(
-      CFG.LINEWIDTH_MIN,
-      Math.min(CFG.LINEWIDTH_MAX, $canvas.width / (SIZE * CFG.LINEWIDTH_DENOM))
-    );
-    ctx.beginPath();
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  function spawnBubble(cell, text, player) {
-    const bubble = document.createElement('div');
-    bubble.className = 'bubble';
-    bubble.textContent = text;
-    bubble.style.color = player === RED ? 'var(--red)' : 'var(--blue)';
-    cell.appendChild(bubble);
-    setTimeout(()=> bubble.remove(), CFG.BUBBLE_LIFETIME_MS);
-  }
-
-  function pulseCell(x,y) {
-    const c = getCell(x,y);
-    if (!c) return;
-    c.classList.remove('pulse'); // reset if still present
-    void c.offsetWidth; // reflow
-    c.classList.add('pulse');
-    setTimeout(()=> c.classList.remove('pulse'), CFG.ANIM_PULSE_MS + 20);
-  }
-
-  function getCell(x,y) {
-    return $board.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-  }
-
-  function delay(ms) { return new Promise(res => setTimeout(res, ms)); }
-
-  function checkEnd() {
-    const redWin = scores.R >= CFG.SCORE_TO_WIN;
-    const blueWin = scores.B >= CFG.SCORE_TO_WIN;
-
-    if (redWin || blueWin) {
-      gameOver = true;
-      let title = '';
-      if (scores.R > scores.B) title = 'Red wins!';
-      else if (scores.B > scores.R) title = 'Blue wins!';
-      else title = 'It’s a tie!';
-      showOverlay(title, `Final Score — Red: ${scores.R} · Blue: ${scores.B}`);
-      return true;
-    }
-
-    // Board full?
-    let filled = true;
-    outer: for (let y=0;y<SIZE;y++){
-      for (let x=0;x<SIZE;x++){
-        if (board[y][x] === null) { filled = false; break outer; }
-      }
-    }
-    if (filled) {
-      gameOver = true;
-      const title = (scores.R === scores.B) ? 'Draw!' : (scores.R > scores.B ? 'Red wins!' : 'Blue wins!');
-      showOverlay(title, `Final Score — Red: ${scores.R} · Blue: ${scores.B}`);
-      return true;
-    }
-    return false;
-  }
-
-  function showOverlay(title, desc) {
-    $ovTitle.textContent = title;
-    $ovDesc.textContent = desc;
-    $overlay.classList.add('show');
-    $overlay.setAttribute('aria-hidden', 'false');
-  }
-  function hideOverlay() {
-    $overlay.classList.remove('show');
-    $overlay.setAttribute('aria-hidden', 'true');
-  }
-
-  function newGame() {
-    board = makeEmptyBoard(SIZE);
-    scores = { R:0, B:0 };
-    current = RED;
-    gameOver = false;
-    lastPlaced = null;
-    // Respect CFG defaults on new game
-    selected = CFG.DEFAULT_SELECTED;
-    rot = CFG.DEFAULT_RELAY_ROT;
-    setOrientActive(rot);
-    selectPiece(selected);
-    updateUI();
-    updateAiLabel();
-    maybeAIMove();
-  }
-
-  // ------------------------------ AI ---------------------------------------
-  async function maybeAIMove() {
-    if (gameOver || busy) return;
-    if (!aiEnabled) return;
-    if (current !== aiColor) return;
-    await delay(CFG.AI_DELAY_MS);
-
-    const move = chooseBestMove(board, aiColor);
-    if (move) {
-      await tryMove(move);
-    } else {
-      swapTurn();
-      updateUI();
-    }
-  }
-
-  function chooseBestMove(b, player) {
-    const fieldsNow = computeFields(b);
-    const cells = candidateCells(b, fieldsNow, lastPlaced, CFG.AI_MAX_CANDIDATES);
-    const moves = enumerateMovesFromCells(b, cells, player, CFG.AI_MAX_MOVES);
-
-    if (moves.length === 0) return null;
-
-    let best = null;
-    let bestScore = -Infinity;
-
-    for (const mv of moves) {
-      const s = evaluateMove(b, mv, player);
-      const jitter = (Math.random()-0.5) * CFG.AI_JITTER;
-      const score = s + jitter;
-      if (score > bestScore) {
-        bestScore = score;
-        best = mv;
-      }
-    }
-    return best;
-  }
-
-  function candidateCells(b, fields, last, cap=60) {
-    const candidates = new Set();
-    function add(x,y){
-      if (!inBoard(x,y)) return;
-      if (b[y][x] !== null) return;
-      candidates.add(`${x},${y}`);
-    }
-
-    // If board empty, aim near center
-    let empty = true;
-    outer: for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) {
-      if (b[y][x] !== null) { empty = false; break outer; }
-    }
-    if (empty) {
-      const cx = Math.floor(SIZE/2), cy = Math.floor(SIZE/2);
-      add(cx,cy);
-      for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++) add(cx+dx, cy+dy);
-      return Array.from(candidates).map(s => s.split(',').map(Number)).slice(0, cap);
-    }
-
-    // 1) Around last move
-    if (last) {
-      const R = CFG.CANDIDATE_LAST_RADIUS;
-      for (let dy=-R; dy<=R; dy++) for (let dx=-R; dx<=R; dx++) add(last.x+dx, last.y+dy);
-    }
-
-    // 2) Around any piece
-    const PR = CFG.CANDIDATE_AROUND_PIECE_RADIUS;
-    for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) {
-      if (b[y][x] !== null) {
-        for (let dy=-PR; dy<=PR; dy++) for (let dx=-PR; dx<=PR; dx++) add(x+dx, y+dy);
-      }
-    }
-
-    // 3) Near high-field cells
-    for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) {
-      if (fields.total[y][x] >= CFG.CANDIDATE_HIGH_FIELD_THRESHOLD) {
-        for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++) add(x+dx, y+dy);
-      }
-    }
-
-    // Fill with random empties if still short
-    if (candidates.size < cap) {
-      const empties = [];
-      for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) {
-        if (b[y][x] === null) empties.push([x,y]);
-      }
-      shuffle(empties);
-      for (const [x,y] of empties) {
-        add(x,y);
-        if (candidates.size >= cap) break;
-      }
-    }
-
-    const arr = [];
-    for (const key of candidates) {
-      const [x,y] = key.split(',').map(Number);
-      arr.push([x,y]);
-      if (arr.length >= cap) break;
-    }
-    return arr;
-  }
-
-  function enumerateMovesFromCells(b, cells, player, capMoves=220) {
-    const out = [];
-    for (const [x,y] of cells) {
-      if (b[y][x] !== null) continue;
-      out.push({type: PIECE.ANCHOR, x, y, player});
-      out.push({type: PIECE.PRISM, x, y, player});
-      // All 4 orientations for relay
-      for (let r=0;r<4;r++) out.push({type: PIECE.RELAY, x, y, rot:r, player});
-      if (out.length >= capMoves) break;
-    }
-    return out;
-  }
-
-  function deepCloneBoard(b) {
-    const c = new Array(SIZE);
-    for (let y=0;y<SIZE;y++){
-      c[y] = new Array(SIZE);
-      for (let x=0;x<SIZE;x++){
-        const p = b[y][x];
-        c[y][x] = p ? { type:p.type, player:p.player, rot:p.rot } : null;
-      }
-    }
-    return c;
-  }
-
-  function evaluateMove(b, mv, player) {
-    const sim = deepCloneBoard(b);
-    if (sim[mv.y][mv.x] !== null) return -9999;
-    sim[mv.y][mv.x] = { type: mv.type, player: mv.player, rot: mv.rot ?? 0 };
-
-    let scoreSelf = 0;
-    let scoreOpp = 0;
-
-    // 1) Fields
-    let fields = computeFields(sim);
-
-    // 2) Overload
-    const overloaded = [];
-    for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) {
-      if (fields.total[y][x] >= CFG.OVERLOAD_THRESHOLD) overloaded.push({x,y});
-    }
-    if (overloaded.length) {
-      const blast = new Set();
-      for (const c of overloaded) {
-        for (let dy=-1; dy<=1; dy++){
-          for (let dx=-1; dx<=1; dx++){
-            const nx = c.x+dx, ny = c.y+dy;
-            if (inBoard(nx,ny)) blast.add(`${nx},${ny}`);
-          }
-        }
-      }
-      let own=0, opp=0;
-      for (const key of blast) {
-        const [bx,by] = key.split(',').map(Number);
-        const p = sim[by][bx];
-        if (p) {
-          if (p.player === player) own++; else opp++;
-          sim[by][bx] = null;
-        }
-      }
-      scoreSelf += own*CFG.SCORE_OVERLOAD_OWN + opp*CFG.SCORE_OVERLOAD_ENEMY;
-      fields = computeFields(sim);
-    }
-
-    // 3) Resonances for both
-    const events = computeResonances(sim, fields);
-    for (const e of events) {
-      if (e.player === player) scoreSelf += e.points;
-      else scoreOpp += e.points;
-    }
-
-    // Simple evaluation
-    return scoreSelf - CFG.AI_OPPONENT_WEIGHT * scoreOpp;
-  }
-
-  function shuffle(a) {
-    for (let i=a.length-1;i>0;i--){
-      const j = (Math.random()* (i+1))|0;
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-  }
-
-  // Init piece selection explicitly (CFG already applied above)
-  // selectPiece(selected); // done earlier
+'use strict';
+
+const CFG = {
+BOARD_SIZE: 10, SCORE_TO_WIN: 500, OVERLOAD_THRESHOLD: 5, SCORE_OVERLOAD_OWN: 1,
+SCORE_OVERLOAD_ENEMY: 2, RELAY_RANGE: 3, RELAY_BASE_ADD: 1, PRISM_REQUIRE_POSITIVE: true,
+DEFAULT_SELECTED: 'anchor', DEFAULT_RELAY_ROT: 1, AI_ENABLED_DEFAULT: true, AI_COLOR: 'P',
+AI_DELAY_MS: 120, AI_MAX_CANDIDATES: 60, AI_MAX_MOVES: 220, AI_JITTER: 0.05,
+AI_OPPONENT_WEIGHT: 0.5, CANDIDATE_LAST_RADIUS: 2, CANDIDATE_AROUND_PIECE_RADIUS: 1,
+CANDIDATE_HIGH_FIELD_THRESHOLD: 2, ANIM_FLASH_MS: 400, ANIM_PULSE_MS: 600,
+ANIM_POST_OVERLOAD_DELAY_MS: 40, ANIM_CANVAS_FADE_MS: 600, ANIM_CANVAS_CLEAR_DELAY_MS: 650,
+BUBBLE_LIFETIME_MS: 1300, LINEWIDTH_MIN: 2, LINEWIDTH_MAX: 4
+};
+
+function applyCSSFromConfig() {
+const root = document.documentElement;
+root.style.setProperty('--flash-ms', CFG.ANIM_FLASH_MS + 'ms');
+root.style.setProperty('--pulse-ms', CFG.ANIM_PULSE_MS + 'ms');
+root.style.setProperty('--canvas-fade-ms', CFG.ANIM_CANVAS_FADE_MS + 'ms');
+}
+applyCSSFromConfig();
+
+const SIZE = CFG.BOARD_SIZE, ORANGE = 'O', PURPLE = 'P', PIECE = { ANCHOR:'anchor', RELAY:'relay', PRISM:'prism' }, DIR = [ [0,-1], [1,0], [0,1], [-1,0] ];
+let board, current, scores, selected, rot, gameOver, aiEnabled, busy, lastPlaced, retryPending, retryTimeout;
+const aiColor = CFG.AI_COLOR === 'O' ? ORANGE : PURPLE;
+
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+const $board = $('#board'), $scoreR = $('#scoreR'), $scoreB = $('#scoreB'), $btnAnchor = $('#btnAnchor');
+const $btnRelay = $('#btnRelay'), $btnPrism = $('#btnPrism'), $orientWrap = $('#orientWrap'), $orientBtns = $$('.orient-btn');
+const $canvas = $('#linesCanvas'), $endGameOverlay = $('#endGameOverlay');
+const $ovTitle = $('#ovTitle'), $ovDesc = $('#ovDesc'), $ovNew = $('#ovNew'), $ovClose = $('#ovClose');
+const $aiToggleBtn = $('#aiToggleBtn'), $retryBtn = $('#retryBtn');
+
+function initBoardDOM() {
+$board.style.setProperty('--size', SIZE); $board.innerHTML = '';
+for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) {
+const cell = document.createElement('div');
+cell.className = 'cell'; cell.dataset.x = x; cell.dataset.y = y;
+cell.innerHTML = `<div class="glow orange"></div><div class="glow purple"></div><div class="beams"></div><div class="piece"></div>`;
+cell.addEventListener('pointerup', onCellPointerUp, {passive:true});
+$board.appendChild(cell);
+}
+const ro = new ResizeObserver(() => {
+const rect = $board.getBoundingClientRect();
+$canvas.width = rect.width * devicePixelRatio; $canvas.height = rect.height * devicePixelRatio;
+$canvas.style.width = rect.width + 'px'; $canvas.style.height = rect.height + 'px';
+}); ro.observe($board);
+}
+
+function onCellPointerUp(ev) {
+if (gameOver || busy) return;
+const {x, y} = ev.currentTarget.dataset;
+if (board[y][x]) return;
+const move = { x: +x, y: +y, player: current, type: selected };
+if (selected === PIECE.RELAY) move.rot = rot;
+tryMove(move);
+}
+
+function setOrientActive(r) { $orientBtns.forEach(o => o.classList.toggle('active', +o.dataset.rot === r)); }
+function selectPiece(t) {
+selected = t;
+$btnAnchor.classList.toggle('active', t === PIECE.ANCHOR);
+$btnRelay.classList.toggle('active', t === PIECE.RELAY);
+$btnPrism.classList.toggle('active', t === PIECE.PRISM);
+const show = t === PIECE.RELAY;
+$orientWrap.style.visibility = show ? 'visible' : 'hidden';
+$orientWrap.style.opacity = show ? '1' : '0';
+}
+
+async function tryMove(move) {
+placeToBoard(move); lastPlaced = {x: move.x, y: move.y}; pulseCell(move.x, move.y);
+await resolveTurnEffects(move.player);
+if (checkEnd()) return;
+swapTurn(); updateUI();
+await maybeAIMove();
+}
+
+function placeToBoard(m) { board[m.y][m.x] = { type: m.type, player: m.player, rot: m.rot ?? 0 }; updateBoardGraphics(); }
+function inBoard(x,y) { return x>=0 && y>=0 && x<SIZE && y<SIZE; }
+function swapTurn() { current = (current === ORANGE) ? PURPLE : ORANGE; }
+
+function updateUI() {
+$scoreR.textContent = scores.O; $scoreB.textContent = scores.P;
+document.body.className = (current === ORANGE) ? 'turn-orange' : 'turn-purple';
+updateBoardGraphics();
+}
+
+function updateBoardGraphics() {
+const fields = computeFields(board); const beamsList = computeBeams(board);
+drawCells(fields, beamsList);
+}
+
+function drawCells(fields, beamsList) {
+const fragByCell = new Map();
+for (const seg of beamsList) {
+const key = `${seg.x},${seg.y}`; if (!fragByCell.has(key)) fragByCell.set(key, []);
+const div = document.createElement('div');
+div.className = `beam ${seg.color === ORANGE ? 'orange' : 'purple'} ${seg.dir % 2 === 0 ? 'v' : 'h'}`;
+fragByCell.get(key).push(div);
+}
+for (const cell of $board.children) {
+const {x, y} = cell.dataset; const [glowO, glowP, beams, piece] = cell.children;
+glowO.style.opacity = String(Math.min(0.9, (fields.oField[y][x] || 0) * 0.22));
+glowP.style.opacity = String(Math.min(0.9, (fields.pField[y][x] || 0) * 0.22));
+beams.innerHTML = '';
+const cellBeams = fragByCell.get(`${x},${y}`); if (cellBeams) for (const bd of cellBeams) beams.appendChild(bd);
+piece.className = 'piece'; piece.innerHTML = '';
+const p = board[y][x];
+if (p) {
+piece.classList.add(p.player === ORANGE ? 'orange' : 'purple');
+piece.innerHTML = `<span class="picon">${p.type === PIECE.ANCHOR ? '●' : p.type === PIECE.PRISM ? '◇' : ['▲', '▶', '▼', '◀'][p.rot]}</span>`;
+}
+}
+}
+
+function makeZeroField() { return Array.from({length: SIZE}, () => Array(SIZE).fill(0)); }
+function sumFields(a, b) { return a.map((r, y) => r.map((c, x) => c + (b[y][x]||0))); }
+function computeFields(b) {
+const oA = makeZeroField(), pA = makeZeroField();
+for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) {
+const p = b[y][x]; if (!p || p.type !== PIECE.ANCHOR) continue;
+const tar = (p.player === ORANGE ? oA : pA);
+for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++) {
+if ((dx||dy) && inBoard(x+dx,y+dy)) tar[y+dy][x+dx]++;
+}
+}
+const anchorTotal = sumFields(oA, pA), oField = oA.map(r=>r.slice()), pField = pA.map(r=>r.slice());
+for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) {
+const p = b[y][x]; if (!p || p.type !== PIECE.RELAY) continue;
+const [dx,dy] = DIR[p.rot];
+const base = inBoard(x-dx,y-dy) ? anchorTotal[y-dy][x-dx] : 0;
+const projVal = base + CFG.RELAY_BASE_ADD;
+for (let s=1; s<=CFG.RELAY_RANGE; s++) {
+const tx = x + dx*s, ty = y + dy*s;
+if (!inBoard(tx,ty)) continue;
+if (p.player === ORANGE) oField[ty][tx] += projVal; else pField[ty][tx] += projVal;
+}
+} return { oField, pField, total: sumFields(oField, pField) };
+}
+function computeBeams(b) {
+const beams = [], fieldsA = computeAnchorOnlyTotals(b);
+for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) {
+const p = b[y][x]; if (!p || p.type !== PIECE.RELAY) continue;
+const [dx,dy] = DIR[p.rot];
+const base = inBoard(x-dx,y-dy) ? fieldsA[y-dy][x-dx] : 0;
+const projVal = base + CFG.RELAY_BASE_ADD;
+if (projVal > 0) for (let s=1; s<=CFG.RELAY_RANGE; s++) {
+const tx = x + dx*s, ty = y + dy*s;
+if (inBoard(tx,ty)) beams.push({ x:tx, y:ty, dir:p.rot, color: p.player });
+}
+} return beams;
+}
+function computeAnchorOnlyTotals(b) {
+const oA = makeZeroField(), pA = makeZeroField();
+for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) {
+const p = b[y][x]; if (!p || p.type !== PIECE.ANCHOR) continue;
+const tar = (p.player === ORANGE ? oA : pA);
+for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++) if ((dx||dy) && inBoard(x+dx,y+dy)) tar[y+dy][x+dx]++;
+} return sumFields(oA, pA);
+}
+
+async function resolveTurnEffects(player) {
+busy = true; let fields = computeFields(board);
+const overloaded = [];
+for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) if (fields.total[y][x] >= CFG.OVERLOAD_THRESHOLD) overloaded.push({x,y});
+if (overloaded.length) {
+const blast = new Set();
+for (const c of overloaded) for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++) if (inBoard(c.x+dx, c.y+dy)) blast.add(`${c.x+dx},${c.y+dy}`);
+for (const key of blast) getCell(...key.split(',')).classList.add('flash');
+await delay(CFG.ANIM_FLASH_MS);
+for (const key of blast) getCell(...key.split(',')).classList.remove('flash');
+let own=0, opp=0;
+for (const key of blast) {
+const [bx,by] = key.split(',').map(Number), p = board[by][bx];
+if (p) { if (p.player === player) own++; else opp++; board[by][bx] = null; }
+}
+const gain = own*CFG.SCORE_OVERLOAD_OWN + opp*CFG.SCORE_OVERLOAD_ENEMY;
+if (gain>0) {
+scores[player] += gain;
+const center = lastPlaced ? getCell(lastPlaced.x, lastPlaced.y) : getCell(overloaded[0].x, overloaded[0].y);
+spawnBubble(center, `+${gain}`, player);
+}
+fields = computeFields(board); updateBoardGraphics(); await delay(CFG.ANIM_POST_OVERLOAD_DELAY_MS);
+}
+const events = computeResonances(board, fields);
+const addO = events.filter(e => e.player === ORANGE).reduce((s,e)=>s+e.points,0);
+const addP = events.filter(e => e.player === PURPLE).reduce((s,e)=>s+e.points,0);
+if (addO>0 || addP>0) { scores.O += addO; scores.P += addP; await animateResonances(events); }
+updateUI(); busy = false;
+}
+
+function computeResonances(b, fields) {
+const out = [];
+for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) {
+const p = b[y][x]; if (!p || p.type !== PIECE.PRISM) continue;
+const vN = inBoard(x, y-1)?fields.total[y-1][x]:0, vS = inBoard(x, y+1)?fields.total[y+1][x]:0;
+const vE = inBoard(x+1, y)?fields.total[y][x+1]:0, vW = inBoard(x-1, y)?fields.total[y][x-1]:0;
+let points = 0; const pairs = [];
+if ((!CFG.PRISM_REQUIRE_POSITIVE||vN>0) && vN === vS) { points+=vN; pairs.push({f:{x,y},a:{x:x,y:y-1},b:{x:x,y:y+1}}); }
+if ((!CFG.PRISM_REQUIRE_POSITIVE||vE>0) && vE === vW) { points+=vE; pairs.push({f:{x,y},a:{x:x+1,y:y},b:{x:x-1,y:y}}); }
+if (points > 0) out.push({ player: p.player, x, y, points, pairs });
+} return out;
+}
+
+async function animateResonances(events) {
+if (!events.length) return;
+const ctx = $canvas.getContext('2d'); ctx.clearRect(0,0,$canvas.width,$canvas.height);
+for (const e of events) { const piece = getCell(e.x, e.y).querySelector('.piece .picon'); if (piece) { piece.textContent = '◆'; piece.classList.add('pulse'); }}
+const boardRect = $board.getBoundingClientRect(), DPR = devicePixelRatio || 1;
+const centerOf = (x,y) => { const r = getCell(x,y).getBoundingClientRect(); return { x: ((r.left+r.right)/2-boardRect.left)*DPR, y: ((r.top+r.bottom)/2-boardRect.top)*DPR }; };
+for (const e of events) for (const pair of e.pairs) { drawPulseLine(ctx, centerOf(pair.f.x, pair.f.y), centerOf(pair.a.x, pair.a.y), e.player); drawPulseLine(ctx, centerOf(pair.f.x, pair.f.y), centerOf(pair.b.x, pair.b.y), e.player); }
+$canvas.style.transition = 'none'; $canvas.style.opacity = '1'; await delay(20);
+$canvas.style.transition = `opacity ${CFG.ANIM_CANVAS_FADE_MS}ms ease`; $canvas.style.opacity = '0';
+setTimeout(()=> { ctx.clearRect(0,0,$canvas.width,$canvas.height); $canvas.style.transition = 'none'; $canvas.style.opacity = '1'; }, CFG.ANIM_CANVAS_CLEAR_DELAY_MS);
+for (const e of events) spawnBubble(getCell(e.x, e.y), `+${e.points}`, e.player);
+await delay(CFG.ANIM_CANVAS_CLEAR_DELAY_MS);
+for (const e of events) { const piece = getCell(e.x, e.y).querySelector('.piece .picon'); if (piece) { piece.textContent = '◇'; piece.classList.remove('pulse'); }}
+}
+function drawPulseLine(ctx, p1, p2, player) {
+const color = getComputedStyle(document.documentElement).getPropertyValue(player === ORANGE ? '--orange' : '--purple').trim();
+ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 10; ctx.strokeStyle = color;
+ctx.lineWidth = Math.max(CFG.LINEWIDTH_MIN, Math.min(CFG.LINEWIDTH_MAX, $canvas.width / (SIZE * 30)));
+ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); ctx.restore();
+}
+function spawnBubble(cell, text, player) {
+const bubble = document.createElement('div'); bubble.className = 'bubble'; bubble.textContent = text;
+bubble.style.color = `var(--${player === ORANGE ? 'orange' : 'purple'})`; cell.appendChild(bubble);
+setTimeout(()=> bubble.remove(), CFG.BUBBLE_LIFETIME_MS);
+}
+function pulseCell(x,y) { const c = getCell(x,y); if(c) { c.classList.add('pulse'); setTimeout(()=> c.classList.remove('pulse'), CFG.ANIM_PULSE_MS + 20); }}
+function getCell(x,y) { return $board.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`); }
+function delay(ms) { return new Promise(res => setTimeout(res, ms)); }
+function checkEnd() {
+let title, desc;
+if (scores.O >= CFG.SCORE_TO_WIN || scores.P >= CFG.SCORE_TO_WIN) {
+title = (scores.O > scores.P) ? 'Orange wins!' : (scores.P > scores.O ? 'Purple wins!' : 'It’s a tie!');
+desc = `Final Score — Orange: ${scores.O} · Purple: ${scores.P}`;
+} else if (!board.flat().includes(null)) {
+title = (scores.O === scores.P) ? 'Draw!' : (scores.O > scores.P ? 'Orange wins!' : 'Purple wins!');
+desc = `Final Score — Orange: ${scores.O} · Purple: ${scores.P}`;
+} else return false;
+gameOver = true; showEndGameOverlay(title, desc); return true;
+}
+
+function showEndGameOverlay(title, desc) { $ovTitle.textContent = title; $ovDesc.textContent = desc; $endGameOverlay.classList.add('show'); }
+function hideEndGameOverlay() { $endGameOverlay.classList.remove('show'); }
+
+function newGame() {
+board = Array.from({length: SIZE}, () => Array(SIZE).fill(null)); scores = { O:0, P:0 }; current = ORANGE;
+gameOver = false; lastPlaced = null; selected = CFG.DEFAULT_SELECTED; rot = CFG.DEFAULT_RELAY_ROT;
+aiEnabled = CFG.AI_ENABLED_DEFAULT;
+retryPending = false; if(retryTimeout) clearTimeout(retryTimeout); $retryBtn.classList.remove('pending');
+$aiToggleBtn.classList.toggle('active', aiEnabled);
+setOrientActive(rot); selectPiece(selected); updateUI(); hideEndGameOverlay(); maybeAIMove();
+}
+
+async function maybeAIMove() {
+if (gameOver || busy || !aiEnabled || current !== aiColor) return;
+await delay(CFG.AI_DELAY_MS);
+const move = chooseBestMove(); if (move) await tryMove(move); else { swapTurn(); updateUI(); }
+}
+function chooseBestMove() {
+const fields = computeFields(board), cells = candidateCells(fields), moves = enumerateMovesFromCells(cells);
+if (moves.length === 0) return null; let best = null, bestScore = -Infinity;
+for (const mv of moves) { const s = evaluateMove(mv) + (Math.random()-0.5)*CFG.AI_JITTER; if (s > bestScore) { bestScore = s; best = mv; } } return best;
+}
+function candidateCells(fields) {
+const candidates = new Set(); const add = (x,y) => { if (inBoard(x,y) && !board[y][x]) candidates.add(`${x},${y}`); };
+if (board.flat().every(p => !p)) { const c = Math.floor(SIZE/2); for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++) add(c+dx, c+dy); } else {
+if (lastPlaced) for (let dy=-CFG.CANDIDATE_LAST_RADIUS; dy<=CFG.CANDIDATE_LAST_RADIUS; dy++) for (let dx=-CFG.CANDIDATE_LAST_RADIUS; dx<=CFG.CANDIDATE_LAST_RADIUS; dx++) add(lastPlaced.x+dx, lastPlaced.y+dy);
+for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) if (board[y][x]) for (let dy=-CFG.CANDIDATE_AROUND_PIECE_RADIUS; dy<=CFG.CANDIDATE_AROUND_PIECE_RADIUS; dy++) for (let dx=-CFG.CANDIDATE_AROUND_PIECE_RADIUS; dx<=CFG.CANDIDATE_AROUND_PIECE_RADIUS; dx++) add(x+dx, y+dy);
+for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) if (fields.total[y][x] >= CFG.CANDIDATE_HIGH_FIELD_THRESHOLD) for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++) add(x+dx, y+dy);
+} if (candidates.size < CFG.AI_MAX_CANDIDATES) { const empties = []; for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) if (!board[y][x]) empties.push([x,y]); shuffle(empties); for (const [x,y] of empties) { add(x,y); if (candidates.size >= CFG.AI_MAX_CANDIDATES) break; } }
+return Array.from(candidates, s => s.split(',').map(Number)).slice(0, CFG.AI_MAX_CANDIDATES);
+}
+function enumerateMovesFromCells(cells) {
+const out = [];
+for (const [x,y] of cells) { out.push({type:PIECE.ANCHOR,x,y,player:aiColor}), out.push({type:PIECE.PRISM,x,y,player:aiColor}); for (let r=0;r<4;r++) out.push({type:PIECE.RELAY,x,y,rot:r,player:aiColor}); if (out.length >= CFG.AI_MAX_MOVES) break; } return out;
+}
+function evaluateMove(mv) {
+const sim = board.map(r => r.map(p => p ? {...p} : null));
+if (sim[mv.y][mv.x]) return -9999; sim[mv.y][mv.x] = { type: mv.type, player: mv.player, rot: mv.rot ?? 0 };
+let scoreSelf=0, scoreOpp=0, fields = computeFields(sim);
+const overloaded = []; for (let y=0;y<SIZE;y++) for (let x=0;x<SIZE;x++) if (fields.total[y][x] >= CFG.OVERLOAD_THRESHOLD) overloaded.push({x,y});
+if (overloaded.length) { const blast = new Set(); for (const c of overloaded) for (let dy=-1; dy<=1; dy++) for (let dx=-1; dx<=1; dx++) if (inBoard(c.x+dx, c.y+dy)) blast.add(`${c.x+dx},${c.y+dy}`); let own=0, opp=0; for (const key of blast) { const [bx,by] = key.split(',').map(Number), p = sim[by][bx]; if (p) { if (p.player === aiColor) own++; else opp++; sim[by][bx] = null; } } scoreSelf += own*CFG.SCORE_OVERLOAD_OWN + opp*CFG.SCORE_OVERLOAD_ENEMY; fields = computeFields(sim); }
+const events = computeResonances(sim, fields);
+for (const e of events) { if (e.player === aiColor) scoreSelf += e.points; else scoreOpp += e.points; }
+return scoreSelf - CFG.AI_OPPONENT_WEIGHT * scoreOpp;
+}
+function shuffle(a) { for (let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } }
+
+initBoardDOM();
+newGame();
+
+$ovNew.addEventListener('click', newGame);
+$ovClose.addEventListener('click', hideEndGameOverlay);
+$aiToggleBtn.addEventListener('click', () => {
+aiEnabled = !aiEnabled;
+$aiToggleBtn.classList.toggle('active', aiEnabled);
+maybeAIMove();
+});
+$retryBtn.addEventListener('click', () => {
+if(retryTimeout) clearTimeout(retryTimeout);
+if (retryPending) {
+newGame();
+} else {
+retryPending = true;
+$retryBtn.classList.add('pending');
+retryTimeout = setTimeout(() => {
+retryPending = false;
+$retryBtn.classList.remove('pending');
+}, 3000);
+}
+});
+$$('.piece-btn').forEach(el => el.addEventListener('click', () => selectPiece(el.dataset.piece)));
+$orientBtns.forEach(b => b.addEventListener('click', () => { rot = +b.dataset.rot; setOrientActive(rot); }));
 
 })();
 </script>
+
 </body>
 </html>
