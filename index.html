@@ -77,13 +77,16 @@ font-style: italic;
 .orange-score .value { color: var(--orange); text-shadow: 0 0 8px var(--orange); }
 .purple-score .value { color: var(--purple); text-shadow: 0 0 8px var(--purple); }
 
+/* --- MODIFIED --- */
 .main-content {
-flex-grow:1;
-display:flex;
-align-items:center;
-justify-content:center;
-min-height:0;
-padding: 0 10px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column; /* Stacks items vertically */
+    gap: 16px;             /* Adds space between board and controls */
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    padding: 0 10px;
 }
 
 .board-area {
@@ -137,15 +140,15 @@ border-color: var(--orange);
 transform: rotate(-180deg);
 }
 
-
+/* --- MODIFIED --- */
 .bottom-controls {
-display:flex;
-justify-content:center;
-align-items:flex-end;
-gap: 16px;
-padding: 10px 0 16px 0;
-flex-wrap: wrap;
-min-height: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center; /* Changed from flex-end */
+    gap: 16px;
+    padding: 0; /* Removed padding */
+    flex-wrap: wrap;
+    /* min-height property removed */
 }
 
 .btn {
@@ -405,44 +408,45 @@ box-shadow: 0 0 30px rgba(0,0,0,0.5);
 </header>
 
 <main class="main-content">
-<div class="board-area">
-<div class="board-controls">
-<button id="aiToggleBtn" class="board-btn ai-btn" aria-label="Toggle AI">
-<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="pointer-events: none;">
-    <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-4 0V4a2 2 0 0 1 2-2zM5 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8zm4 5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm6 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"></path>
-</svg>
-</button>
-<button id="retryBtn" class="board-btn retry-btn" aria-label="New Game">
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;">
-    <path d="M21.5 2v6h-6"></path>
-    <path d="M3.27 12.55a9 9 0 0 1 15.1-5.45L21.5 8"></path>
-    <path d="M2.5 22v-6h6"></path>
-    <path d="M20.73 11.45a9 9 0 0 1-15.1 5.45L2.5 16"></path>
-</svg>
-</button>
-</div>
-<div class="board-wrap">
-<div id="board" class="board"></div>
-<canvas id="linesCanvas" class="lines"></canvas>
-</div>
-</div>
+    <div class="board-area">
+        <div class="board-controls">
+            <button id="aiToggleBtn" class="board-btn ai-btn" aria-label="Toggle AI">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="pointer-events: none;">
+                <path d="M12 2a2 2 0 0 1 2 2v2a2 2 0 0 1-4 0V4a2 2 0 0 1 2-2zM5 8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8zm4 5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm6 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"></path>
+            </svg>
+            </button>
+            <button id="retryBtn" class="board-btn retry-btn" aria-label="New Game">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;">
+                <path d="M21.5 2v6h-6"></path>
+                <path d="M3.27 12.55a9 9 0 0 1 15.1-5.45L21.5 8"></path>
+                <path d="M2.5 22v-6h6"></path>
+                <path d="M20.73 11.45a9 9 0 0 1-15.1 5.45L2.5 16"></path>
+            </svg>
+            </button>
+        </div>
+        <div class="board-wrap">
+            <div id="board" class="board"></div>
+            <canvas id="linesCanvas" class="lines"></canvas>
+        </div>
+    </div>
+    <!-- --- HTML MOVED HERE --- -->
+    <div class="bottom-controls">
+        <div class="reserve">
+            <div id="btnAnchor" class="piece-btn active" data-piece="anchor"><span class="icon">●</span></div>
+            <div id="btnRelay" class="piece-btn" data-piece="relay"><span class="icon">➤</span></div>
+            <div id="btnPrism" class="piece-btn" data-piece="prism"><span class="icon">◇</span></div>
+        </div>
+        <div id="orientWrap" class="orientation-panel">
+            <div class="orientation">
+                <div class="orient-btn" data-rot="0">▲</div>
+                <div class="orient-btn active" data-rot="1">▶</div>
+                <div class="orient-btn" data-rot="2">▼</div>
+                <div class="orient-btn" data-rot="3">◀</div>
+            </div>
+        </div>
+    </div>
 </main>
 
-<div class="bottom-controls">
-<div class="reserve">
-<div id="btnAnchor" class="piece-btn active" data-piece="anchor"><span class="icon">●</span></div>
-<div id="btnRelay" class="piece-btn" data-piece="relay"><span class="icon">➤</span></div>
-<div id="btnPrism" class="piece-btn" data-piece="prism"><span class="icon">◇</span></div>
-</div>
-<div id="orientWrap" class="orientation-panel">
-<div class="orientation">
-<div class="orient-btn" data-rot="0">▲</div>
-<div class="orient-btn active" data-rot="1">▶</div>
-<div class="orient-btn" data-rot="2">▼</div>
-<div class="orient-btn" data-rot="3">◀</div>
-</div>
-</div>
-</div>
 </div>
 
 <!-- End Game Overlay -->
